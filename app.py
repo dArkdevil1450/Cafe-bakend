@@ -9,13 +9,28 @@ CORS(app) # Allows React to talk to Python
 def init_db():
     conn = sqlite3.connect('cafe_system.db')
     cursor = conn.cursor()
-    cursor.execute('''CREATE TABLE IF NOT EXISTS order_items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        order_id INTEGER,
-        item_name TEXT,
-        price REAL,
-        quantity INTEGER
-    )''')
+    
+    # Cabinet 1: The main orders table (This was missing and caused yesterday's crash!)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            table_no TEXT,
+            items TEXT,
+            status TEXT DEFAULT 'pending'
+        )
+    ''')
+
+    # Cabinet 2: The specific items inside the order (What you originally had)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS order_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_id INTEGER,
+            item_name TEXT,
+            price REAL,
+            quantity INTEGER
+        )
+    ''')
+    
     conn.commit()
     conn.close()
 
