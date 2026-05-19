@@ -16,6 +16,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             table_no TEXT,
             items TEXT,
+            cafe_id TEXT,
             status TEXT DEFAULT 'pending'
         )
     ''')
