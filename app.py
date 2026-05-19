@@ -72,6 +72,44 @@ def place_order():
 
     return jsonify({"status": "success", "order_id": order_id}), 200
 
+# --- NEW STAFF DASHBOARD APIs ---
+
+# 1. Ask the database for all active orders
+@app.route('/get_orders', methods=['GET'])
+def get_orders():
+    conn = sqlite3.connect('cafe_system.db')
+    cursor = conn.cursor()
+    # We only want orders that haven't been paid yet
+    cursor.execute("SELECT id, table_no, items, status FROM orders WHERE status != 'paid'")
+    orders = cursor.fetchall()
+    conn.close()
+    
+    # Format the data cleanly for the frontend
+    order_list = []
+    for order in orders:
+        order_list.append({
+            "id": order[0],
+            "table_no": order[1],
+            "items": order[2],
+            "status": order[3]
+        })
+    return jsonify(order_list)
+
+# 2. Update the status (Pending -> Cooked -> Paid)
+@app.route('/update_order', methods=['POST'])
+def update_order():
+    data = request.json
+    order_id = data.get('id')
+    new_status = data.get('status')
+    
+    conn = sqlite3.connect('cafe_system.db')
+    cursor = conn.cursor()
+    cursor.execute("UPDATE orders SET status = ? WHERE id = ?", (new_status, order_id))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({"message": f"Order {order_id} updated to {new_status}!"})
+    
 if __name__ == '__main__':
     print("🚀 Server starting... Waiting for orders on port 5000!")
     app.run(debug=True, port=5000)
