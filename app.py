@@ -1,6 +1,7 @@
 import sqlite3
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import json
 
 app = Flask(__name__)
 CORS(app) # Allows React to talk to Python
@@ -11,11 +12,11 @@ def init_db():
     cursor = conn.cursor()
     
     # Cabinet 1: The main orders table (This was missing and caused yesterday's crash!)
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS orders (
+    CREATE TABLE IF NOT EXISTS orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             table_no TEXT,
             items TEXT,
+            total_price REAL,
             cafe_id TEXT,
             status TEXT DEFAULT 'pending'
         )
@@ -41,36 +42,27 @@ init_db()
 def place_order():
     data = request.json
     
-    # Grab the data sent from your React app
+    # Grab data from frontend
     table_no = data.get('table_no', 'Unknown')
     items = data.get('items', [])
+    total_price = data.get('total_price', 0.0) 
     
-    # Connect to the vault
+    # Compress the food list into a single text string so it fits in the drawer perfectly
+    items_string = json.dumps(items)
+    
     conn = sqlite3.connect('cafe_system.db')
     cursor = conn.cursor()
     
-    try:
-        # 1. Create the main order (Assuming this is Cafe #1 for now)
-        cursor.execute("INSERT INTO orders (cafe_id, table_no, status) VALUES (?, ?, 'Pending')", (1, table_no))
-        order_id = cursor.lastrowid # Gets the unique ID of the order we just made
-        
-        # 2. Loop through the cart and save each dish to this order
-        for item in items:
-            cursor.execute("INSERT INTO order_items (order_id, item_name, price, quantity) VALUES (?, ?, ?, ?)", 
-                           (order_id, item.get('name'), item.get('price'), item.get('quantity', 1)))
-        
-        conn.commit()
-        print(f"\n✅ SUCCESS: Order #{order_id} saved for Table {table_no}!")
-        print(f"Dishes ordered: {len(items)}")
-        print("-" * 30)
-        
-    except Exception as e:
-        print("Database Error:", e)
-        return jsonify({"status": "error", "message": "Failed to save order"}), 500
-    finally:
-        conn.close()
-
-    return jsonify({"status": "success", "order_id": order_id}), 200
+    # Save EVERYTHING into the main orders cabinet
+    cursor.execute(
+        "INSERT INTO orders (table_no, items, total_price, status) VALUES (?, ?, ?, 'pending')", 
+        (table_no, items_string, total_price)
+    )
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({"message": "Order sent to kitchen!"})
 
 # --- NEW STAFF DASHBOARD APIs ---
 
@@ -79,19 +71,19 @@ def place_order():
 def get_orders():
     conn = sqlite3.connect('cafe_system.db')
     cursor = conn.cursor()
-    # We only want orders that haven't been paid yet
-    cursor.execute("SELECT id, table_no, items, status FROM orders WHERE status != 'paid'")
+    # Notice we added total_price here
+    cursor.execute("SELECT id, table_no, items, status, total_price FROM orders WHERE status != 'paid'")
     orders = cursor.fetchall()
     conn.close()
     
-    # Format the data cleanly for the frontend
     order_list = []
     for order in orders:
         order_list.append({
             "id": order[0],
             "table_no": order[1],
             "items": order[2],
-            "status": order[3]
+            "status": order[3],
+            "total_price": order[4] # Passing the money to the frontend
         })
     return jsonify(order_list)
 
