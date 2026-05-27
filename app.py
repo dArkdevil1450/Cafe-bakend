@@ -10,7 +10,7 @@ CORS(app) # Allows React to talk to Python
 def init_db():
     conn = sqlite3.connect('cafe_system.db')
     cursor = conn.cursor()
-    
+    cursor.execute('DROP TABLE IF EXISTS orders')
     # The upgraded vault with the total_price drawer
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS orders (
