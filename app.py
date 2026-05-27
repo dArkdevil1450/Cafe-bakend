@@ -92,6 +92,9 @@ def update_order():
     
     return jsonify({"message": f"Order {order_id} updated to {new_status}!"})
     
+# Force the database to rebuild EVERY time the server wakes up
+init_db()
+
 if __name__ == '__main__':
     print("🚀 Server starting... Waiting for orders on port 5000!")
     app.run(debug=True, port=5000)
